@@ -54,7 +54,28 @@ examples: default
 swift_examples:
 	swiftc -O -I . examples/swift_http_server/main.swift uSockets.a -o swift_http_server
 
+.PHONY: commands
+commands:
+	rm -f commands.log
+	for f in src/*.h src/internal/*.h src/internal/eventing/* src/internal/networking/*; do \
+		echo $(CC) $(CFLAGS) -flto -c "$$f" -o "$$f.gch" >> commands.log; \
+	done
+	for f in src/*.c src/eventing/*.c src/crypto/*.c; do \
+		echo $(CC) $(CFLAGS) -flto -c "$$f" -o $$(basename "$$f" ".c").o >> commands.log; \
+	done
+# For now we do rely on C++17 for OpenSSL support but we will be porting this work to C11
+ifeq ($(WITH_OPENSSL),1)
+	for f in src/crypto/*.cpp; do \
+		echo $(CXX) $(CXXFLAGS) -std=c++17 -flto -c "$$f" -o $$(basename "$$f" ".cpp").o >> commands.log; \
+	done
+endif
+	for f in examples/*.c; do \
+		echo $(CC) -flto $(CFLAGS) -c "$$f" -o $$(basename "$$f" ".c").o >> commands.log; \
+	done
+
 clean:
+	rm -f commands.log
+	for f in examples/*.c; do rm -f $$(basename "$$f" ".c"); done
 	rm -f *.o
 	rm -f *.a
 	rm -rf .certs
